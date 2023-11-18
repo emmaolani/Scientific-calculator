@@ -1,6 +1,6 @@
 class Calculator:
     def __init__(self):
-        self.__screen = []
+        self.__input_list = []
         self.__input_type = {
             'number': {
                 1: 'int',
@@ -17,236 +17,276 @@ class Calculator:
                 6: ')'
             }
         }
-        self.__input = ''
-        self.__cur_input_type = ''
-        self.__prev_input_type = ''
+        self.__input = {'value': '',
+                        'type': ''
+                        }
         self.__should_sign = False
         self.__how_many_open_bracket = 0
 
     def __get_input_type(self):
-        if self.__input in self.__input_type['operator'].values():
+        if self.__input['value'] in self.__input_type['operator'].values():
             return self.__validate_operator()
         else:
             return self.__validate_operand()
 
     def store_input(self, new_input):
-        self.__input = new_input
+        self.__input['value'] = new_input
         inp_type = self.__get_input_type()
+        self.__input['type'] = inp_type
         if inp_type in (self.__input_type['operator'][1], self.__input_type['operator'][2]):
-            self.__cur_input_type = inp_type
             self.__insert_plus_minus()
-            self.__prev_input_type = self.__cur_input_type
         elif inp_type in (self.__input_type['operator'][3], self.__input_type['operator'][4]):
-            self.__cur_input_type = inp_type
             self.__insert_multi_division()
-            self.__prev_input_type = self.__cur_input_type
         elif inp_type == self.__input_type['operator'][5]:
-            self.__cur_input_type = inp_type
             self.__insert_open_bracket()
-            self.__prev_input_type = self.__cur_input_type
         elif inp_type == self.__input_type['operator'][6]:
-            self.__cur_input_type = inp_type
             self.__insert_close_bracket()
-            self.__prev_input_type = self.__cur_input_type
         elif inp_type in (self.__input_type['number'][1], self.__input_type['number'][3]):
-            self.__cur_input_type = inp_type
             self.__insert_number()
-            self.__prev_input_type = self.__cur_input_type
         elif inp_type in (self.__input_type['number'][2], self.__input_type['number'][4]):
             self.__display_err('negative number not allowed')
         else:
             self.__display_err(inp_type)
 
-        # Updating previous input type
-        self.__cur_input_type = ''
-
-        print(self.__prev_input_type)
+        self.__input = {'value': '',
+                        'type': ''
+                        }
         print(self.__should_sign)
 
     def __insert_close_bracket(self):
-        if self.__prev_input_type == '':
+        if len(self.__input_list) == 0:
+            previous_input = None
+        else:
+            previous_input = self.__input_list[len(self.__input_list) - 1]
+        self.__input['precedence'] = ')'
+
+        if previous_input is None:
             self.__display_err('Invalid syntax')
-            self.__cur_input_type = self.__prev_input_type
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][1], self.__input_type['operator'][2]):
+        elif previous_input['type'] in (self.__input_type['operator'][1], self.__input_type['operator'][2]):
             self.__display_err('Invalid syntax')
-            self.__cur_input_type = self.__prev_input_type
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][3], self.__input_type['operator'][4]):
+        elif previous_input['type'] in (self.__input_type['operator'][3], self.__input_type['operator'][4]):
             self.__display_err('Invalid syntax')
-            self.__cur_input_type = self.__prev_input_type
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][5]):
+        elif previous_input['type'] in (self.__input_type['operator'][5]):
             self.__display_err('Invalid syntax')
-            self.__cur_input_type = self.__prev_input_type
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][6]):
+        elif previous_input['type'] in (self.__input_type['operator'][6]):
             if self.__how_many_open_bracket > 0:
-                self.__screen.append(self.__input)
+                self.__input_list.append(self.__input)
                 self.__how_many_open_bracket = self.__how_many_open_bracket - 1
             else:
                 self.__display_err('Invalid syntax')
-                self.__cur_input_type = self.__prev_input_type
             return
-        elif self.__prev_input_type in self.__input_type['number'].values():
+        elif previous_input['type'] in self.__input_type['number'].values():
             if self.__how_many_open_bracket > 0:
-                self.__screen.append(self.__input)
+                self.__input_list.append(self.__input)
                 self.__how_many_open_bracket = self.__how_many_open_bracket - 1
             else:
                 self.__display_err('Invalid syntax')
-                self.__cur_input_type = self.__prev_input_type
             return
 
     def __insert_open_bracket(self):
+        if len(self.__input_list) == 0:
+            previous_input = None
+        else:
+            previous_input = self.__input_list[len(self.__input_list) - 1]
+
+        self.__input['precedence'] = '('
+
         self.__how_many_open_bracket = self.__how_many_open_bracket + 1
-        if self.__prev_input_type == '':
-            self.__screen.append(self.__input)
+        if previous_input is None:
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][1], self.__input_type['operator'][2]):
+        elif previous_input['type'] in (self.__input_type['operator'][1], self.__input_type['operator'][2]):
             if self.__should_sign:
-                temp_inp = self.__screen[len(self.__screen)-1]
-                self.__screen[len(self.__screen) - 1] = '0'
-                self.__screen.append(temp_inp)
-                self.__screen.append(self.__input)
+                temp_inp = previous_input
+                self.__input_list[len(self.__input_list) - 1] = {
+                    'value': '0',
+                    'type': self.__input_type['number'][1],
+                    'precedence': None
+                }
+                self.__input_list.append(temp_inp)
+                self.__input_list.append(self.__input)
                 self.__should_sign = False
             else:
-                self.__screen.append(self.__input)
+                self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][3], self.__input_type['operator'][4]):
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in (self.__input_type['operator'][3], self.__input_type['operator'][4]):
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][5]):
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in (self.__input_type['operator'][5]):
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][6]):
-            self.__screen.append('*')
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in (self.__input_type['operator'][6]):
+            temp_inp = {
+                'value': '*',
+                'type': self.__input_type['operator'][3],
+                'precedence': 2
+            }
+            self.__input_list.append(temp_inp)
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in self.__input_type['number'].values():
-            self.__screen.append('*')
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in self.__input_type['number'].values():
+            temp_inp = {
+                'value': '*',
+                'type': self.__input_type['operator'][3],
+                'precedence': 2
+            }
+            self.__input_list.append(temp_inp)
+            self.__input_list.append(self.__input)
             return
 
     def __insert_multi_division(self):
-        if self.__prev_input_type == '':
+        if len(self.__input_list) == 0:
+            previous_input = None
+        else:
+            previous_input = self.__input_list[len(self.__input_list) - 1]
+
+        self.__input['precedence'] = 2
+
+        if previous_input is None:
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][1], self.__input_type['operator'][2]):
+        elif previous_input['type'] in (self.__input_type['operator'][1], self.__input_type['operator'][2]):
             if self.__should_sign:
                 self.__display_err('Invalid syntax')
-                self.__cur_input_type = self.__prev_input_type
             else:
-                self.__screen[len(self.__screen) - 1] = self.__input
+                self.__input_list[len(self.__input_list) - 1] = self.__input
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][3], self.__input_type['operator'][4]):
-            self.__screen[len(self.__screen) - 1] = self.__input
+        elif previous_input['type'] in (self.__input_type['operator'][3], self.__input_type['operator'][4]):
+            self.__input_list[len(self.__input_list) - 1] = self.__input
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][5]):
+        elif previous_input['type'] in (self.__input_type['operator'][5]):
             self.__display_err('Invalid syntax')
-            self.__cur_input_type = self.__prev_input_type
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][6]):
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in (self.__input_type['operator'][6]):
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in self.__input_type['number'].values():
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in self.__input_type['number'].values():
+            self.__input_list.append(self.__input)
             return
 
     def __insert_plus_minus(self):
-        if self.__prev_input_type == '':
-            self.__screen.append('(')
-            self.__screen.append(self.__input)
+        if len(self.__input_list) == 0:
+            previous_input = None
+        else:
+            previous_input = self.__input_list[len(self.__input_list) - 1]
+
+        self.__input['precedence'] = 1
+
+        if previous_input is None:
+            self.__input_list.append('(')
+            self.__input_list.append(self.__input)
             self.__how_many_open_bracket = self.__how_many_open_bracket + 1
             self.__should_sign = True
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][1], self.__input_type['operator'][2],
+        elif previous_input['type'] in (self.__input_type['operator'][1], self.__input_type['operator'][2],
                                         self.__input_type['operator'][3], self.__input_type['operator'][4]):
-            self.__screen[len(self.__screen) - 1] = self.__input
+            self.__input_list[len(self.__input_list) - 1] = self.__input
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][5]):
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in (self.__input_type['operator'][5]):
+            self.__input_list.append(self.__input)
             self.__should_sign = True
             return
-        elif self.__prev_input_type in (self.__input_type['operator'][6]):
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in (self.__input_type['operator'][6]):
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in (self.__input_type['number'].values()):
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in (self.__input_type['number'].values()):
+            self.__input_list.append(self.__input)
             return
 
     def __insert_number(self):
-        if self.__prev_input_type == '':
-            self.__screen.append(self.__input)
+        if len(self.__input_list) == 0:
+            previous_input = None
+        else:
+            previous_input = self.__input_list[len(self.__input_list) - 1]
+
+        self.__input['precedence'] = None
+
+        if previous_input is None:
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type == self.__input_type['operator'][1]:
+        elif previous_input['type'] == self.__input_type['operator'][1]:
             if self.__should_sign:
-                self.__screen[len(self.__screen)-1] = self.__input
+                self.__input_list[len(self.__input_list) - 1] = self.__input
                 self.__should_sign = False
             else:
-                self.__screen.append(self.__input)
+                self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type == self.__input_type['operator'][2]:
+        elif previous_input['type'] == self.__input_type['operator'][2]:
             if self.__should_sign:
-                temp_input = self.__screen[len(self.__screen)-1] + self.__input
-                self.__screen[len(self.__screen)-1] = temp_input
+                temp_input = {
+                    'value': previous_input['value'] + self.__input['value'],
+                    'type': '',
+                    'precedence': None
+                }
                 self.__input = temp_input
-                self.__cur_input_type = self.__get_input_type()
+                self.__input['type'] = self.__get_input_type()
+                self.__input_list[len(self.__input_list) - 1] = self.__input
                 self.__should_sign = False
             else:
-                self.__screen.append(self.__input)
+                self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type in ['*', '/', '(']:
-            self.__screen.append(self.__input)
+        elif previous_input['type'] in ['*', '/', '(']:
+            self.__input_list.append(self.__input)
             return
-        elif self.__prev_input_type == self.__input_type['operator'][6]:
+        elif previous_input['type'] == self.__input_type['operator'][6]:
             # throw error *****************************************
             self.__display_err('Invalid syntax')
-            self.__cur_input_type = self.__prev_input_type
             return
-        elif self.__prev_input_type in (self.__input_type['number'][1], self.__input_type['number'][2]):
-            temp_input = self.__screen[len(self.__screen)-1] + self.__input
-            self.__screen[len(self.__screen)-1] = temp_input
+        elif previous_input['type'] in (self.__input_type['number'][1], self.__input_type['number'][2]):
+            temp_input = {
+                'value': previous_input['value'] + self.__input['value'],
+                'type': '',
+                'precedence': None
+            }
             self.__input = temp_input
-            self.__cur_input_type = self.__get_input_type()
+            self.__input['type'] = self.__get_input_type()
+            self.__input_list[len(self.__input_list) - 1] = self.__input
             return
-        elif self.__prev_input_type in (self.__input_type['number'][3], self.__input_type['number'][4]):
-            if self.__cur_input_type in (self.__input_type['number'][3], self.__input_type['number'][4]):
+        elif previous_input['type'] in (self.__input_type['number'][3], self.__input_type['number'][4]):
+            if self.__input['type'] in (self.__input_type['number'][3], self.__input_type['number'][4]):
                 self.__display_err('Invalid syntax')
-                self.__cur_input_type = self.__prev_input_type
                 return
             else:
-                temp_input = self.__screen[len(self.__screen)-1] + self.__input
-                self.__screen[len(self.__screen)-1] = temp_input
+                temp_input = {
+                    'value': previous_input['value'] + self.__input['value'],
+                    'type': '',
+                    'precedence': None
+                }
                 self.__input = temp_input
-                self.__cur_input_type = self.__get_input_type()
+                self.__input['type'] = self.__get_input_type()
+                self.__input_list[len(self.__input_list) - 1] = self.__input
                 return
 
     def __validate_operator(self):
-        if self.__input == self.__input_type['operator'][1]:
+        if self.__input['value'] == self.__input_type['operator'][1]:
             return self.__input_type['operator'][1]
-        elif self.__input == self.__input_type['operator'][2]:
+        elif self.__input['value'] == self.__input_type['operator'][2]:
             return self.__input_type['operator'][2]
-        elif self.__input == self.__input_type['operator'][3]:
+        elif self.__input['value'] == self.__input_type['operator'][3]:
             return self.__input_type['operator'][3]
-        elif self.__input == self.__input_type['operator'][4]:
+        elif self.__input['value'] == self.__input_type['operator'][4]:
             return self.__input_type['operator'][4]
-        elif self.__input == self.__input_type['operator'][5]:
+        elif self.__input['value'] == self.__input_type['operator'][5]:
             return self.__input_type['operator'][5]
-        elif self.__input == self.__input_type['operator'][6]:
+        elif self.__input['value'] == self.__input_type['operator'][6]:
             return self.__input_type['operator'][6]
 
     def __validate_operand(self):
         try:
             is_it_integer = True
             # checking if number is a float or integer
-            for number in self.__input:
+            for number in self.__input['value']:
                 if number == '.':
                     is_it_integer = False
             if is_it_integer:
-                int(self.__input)
+                int(self.__input['value'])
                 # checking if integer is negative and return type
                 return self.__check_num_signed(self.__input_type['number'][1])
             else:
-                float(self.__input)
+                float(self.__input['value'])
                 # checking if float is negative and return type
                 return self.__check_num_signed(self.__input_type['number'][3])
 
@@ -254,13 +294,13 @@ class Calculator:
             return 'invalid operand'
 
     def __check_num_signed(self, num_type):
-        if self.__input[0] == self.__input_type['operator'][1]:
+        if self.__input['value'][0] == self.__input_type['operator'][1]:
             # removing + sign from number if present and returning unsigned number
             # and setting class current input type
-            temp_input = self.__input.split('+')
-            self.__input = temp_input[1]
+            temp_input = self.__input['value'].split('+')
+            self.__input['value'] = temp_input[1]
             return num_type
-        elif self.__input[0] == self.__input_type['operator'][2]:
+        elif self.__input['value'][0] == self.__input_type['operator'][2]:
             # if number inputted is a negative number we print out an error
             if num_type == self.__input_type['number'][1]:
                 num_type = self.__input_type['number'][2]
@@ -272,34 +312,58 @@ class Calculator:
             return num_type
 
     def delete(self):
-        if len(self.__screen) - 1 > 0:
-            if self.__screen[len(self.__screen) - 1] == self.__input_type['operator'][5]:
+        if len(self.__input_list) == 0:
+            previous_input = None
+        else:
+            previous_input = self.__input_list[len(self.__input_list) - 1]
+
+        if previous_input is not None:
+            if previous_input['type'] == self.__input_type['operator'][5]:
                 self.__how_many_open_bracket = self.__how_many_open_bracket - 1
-            if self.__screen[len(self.__screen) - 1] == self.__input_type['operator'][6]:
+            if previous_input['type'] == self.__input_type['operator'][6]:
                 self.__how_many_open_bracket = self.__how_many_open_bracket + 1
             if self.__should_sign:
                 self.__should_sign = False
 
-            self.__screen.pop()
-            self.__input = self.__screen[len(self.__screen) - 1]
-            inp_type = self.__get_input_type()
-            self.__prev_input_type = inp_type
-
-            print(self.__prev_input_type)
-            print(self.__should_sign)
+            self.__input_list.pop()
         else:
             return
 
     def clear(self):
-        self.__screen = []
-        self.__input = ''
-        self.__cur_input_type = ''
-        self.__prev_input_type = ''
+        self.__input_list = []
+        self.__input = {'value': '',
+                        'type': ''
+                        }
         self.__should_sign = False
         self.__how_many_open_bracket = 0
 
-    def get_screen(self):
-        return self.__screen
+    def get_values(self):
+        show_screen = []
+        for i in range(len(self.__input_list)):
+            show_screen.append(self.__input_list[i]['value'])
+        return show_screen
+
+    def get_input_list(self):
+        self.__change_to_number()
+        self.__complete_bracket()
+        return self.__input_list
+
+    def __complete_bracket(self):
+        while self.__how_many_open_bracket > 0:
+            closed_bracket = {
+                'value': ')',
+                'type': self.__input_type['operator'][5],
+                'precedence': ')'
+            }
+            self.__input_list.append(closed_bracket)
+            self.__how_many_open_bracket = self.__how_many_open_bracket - 1
+
+    def __change_to_number(self):
+        for i in range(len(self.__input_list)):
+            if self.__input_list[i]['type'] in ('int', 'nint'):
+                self.__input_list[i]['value'] = int(self.__input_list[i]['value'])
+            elif self.__input_list[i]['type'] in ('float', 'nfloat'):
+                self.__input_list[i]['value'] = float(self.__input_list[i]['value'])
 
     @staticmethod
     def __display_err(msg):
